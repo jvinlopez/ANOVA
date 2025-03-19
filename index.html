@@ -4,44 +4,73 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ANOVA Analysis Tool</title>
+  <!-- Include jStat for F-critical calculations and SheetJS for Excel export -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.9.4/jstat.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background-color: #282c34;
+      background-color: #3E4A45; /* Outer background */
       color: #ffffff;
     }
     .container {
       max-width: 600px;
-      width: 100%;
       margin: 20px auto;
       padding: 20px;
-      background: #333;
-      border: 3px solid #444;
+      background: #43614F; /* Inner background: muted green shade */
+      border: 3px solid #3E4A45;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       position: relative;
     }
+    /* Top icons navigation */
+    .top-icons {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .top-icons a {
+      text-decoration: none;
+      color: white;
+      font-size: 24px;
+    }
+    /* Hidden menu styling */
+    .menu {
+      display: none;
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
+      position: absolute;
+      left: 5px;
+      top: 50px;
+      z-index: 1000;
+    }
+    .menu ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+    .menu ul li {
+      margin-bottom: 5px;
+    }
+    .menu ul li a {
+      color: #00bfff;
+      text-decoration: none;
+    }
+    .menu ul li a:hover {
+      text-decoration: underline;
+    }
+    /* Logo styling */
     .logo {
       text-align: center;
       margin-bottom: 20px;
     }
     .logo img {
-      height: 50px;
-    }
-    .home-button {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      text-decoration: none;
-      color: white;
-      font-size: 24px;
+      max-width: 500px;
+      border-radius: 8px;
     }
     h1 {
       text-align: center;
@@ -56,7 +85,8 @@
     .input-group label {
       white-space: nowrap;
     }
-    .input-group select, .input-group input {
+    .input-group select,
+    .input-group input {
       padding: 10px;
       border: 1px solid #555;
       border-radius: 4px;
@@ -98,39 +128,57 @@
       padding: 10px;
       border-radius: 8px;
     }
-    .results table {
-      margin-top: 10px;
+    .button {
+      display: block;
       width: 100%;
-      background: #333;
-      border-collapse: collapse;
-      table-layout: auto;
+      padding: 10px;
+      margin-top: 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
     }
-    .results table th, .results table td {
-      padding: 8px;
-      text-align: center;
-      border: 1px solid #555;
-      color: #fff;
-      word-wrap: break-word;
+    .button:hover {
+      background: #23BFCF;
     }
-    .results table th {
-      background: #444;
+    .button.reset {
+      background: #15737D;
     }
-    /* Fix for overlapping text in the results table */
-    .results table th:first-child,
-    .results table td:first-child {
-      min-width: 150px;
-      text-align: left;
+    .button.reset:hover {
+      background: #c82333;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    .button-group button {
+      flex: 1;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <a href="https://jvinlopez.github.io/excellix/" class="home-button" title="Home">🏠</a>
+    <!-- Top navigation -->
+    <div class="top-icons">
+      <a href="https://jvinlopez.github.io/excellix/" title="Home">🏠</a>
+      <a href="#" onclick="toggleMenu()" title="Menu">☰</a>
+    </div>
+    <!-- Hidden menu -->
+    <div id="menu" class="menu">
+      <ul>
+        <li><a href="https://jvinlopez.github.io/Demand-Forecasting/">Demand Forecasting</a></li>
+        <li><a href="https://jvinlopez.github.io/Queueing/">Queueing Theory</a></li>
+        <li><a href="https://jvinlopez.github.io/Correlation/">Design of Experiment Pearson</a></li>
+        <li><a href="https://jvinlopez.github.io/ANOVA/">Design of Experiment ANOVA</a></li>
+      </ul>
+    </div>
+    <!-- Logo -->
     <div class="logo">
-      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEhp3VrJcYLqPjT3fqtguwljuRFKfUzEtxam1T8dacAkDQIybluvRygnnW1WgY6hEr8Xdck-zrKpmoUbkqYwcv3TH7bdddYBIQMOY3CpsSm9ulcgQ_FLQyAkyhtfcujjIl1Q5Txm98pxyNNCFLHvQKM_9Iiha5a3Dc6wLO0wGrUYgfXb46JJfeOdXYqjBfI/w128-h128-p-k-no-nu/excellix.jpg" alt="Excellix Logo">
+      <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEi07AbSzwmXhHr3pP8BVrkijVXYKffzIzup2hwn4nTioAU_Tfa_RG_XDAhyOcSMP2TH-bBQpyrn5INpOubCgfQgjG5dlS3VpwuYx_MmJDI5fTSNMkPa-uAuSId5axBuhZ0Alvq0ogLzpd2ifsg26o3HLD-xEsijg1TLOfi6DRvDan6Qx6yWOGisTLnGlqk/s320/Tool%20Logo%203.png" alt="Tool Logo">
     </div>
     <h1>Analysis of Variance</h1>
-
+    <!-- Input Fields -->
     <div class="input-group">
       <label for="anovaType">Choose ANOVA Type:</label>
       <select id="anovaType" onchange="handleAnovaTypeChange()">
@@ -138,27 +186,26 @@
         <option value="twoway_no_rep">Two-Way ANOVA (Without Replication)</option>
         <option value="twoway_with_rep">Two-Way ANOVA (With Replication)</option>
       </select>
-
-      <!-- For one-way, we now interpret rowCount as the number of observations and colCount as the number of groups -->
       <label for="rowCount" id="rowLabel">Number of Observations:</label>
       <input type="number" id="rowCount" min="1" max="50" value="3" onchange="updateTable()">
-
       <label for="colCount" id="colLabel">Number of Groups:</label>
       <input type="number" id="colCount" min="1" max="50" value="3" onchange="updateTable()">
-
       <div id="replicationInput" style="display: none;">
         <label for="replicationCount">Number of Replications per Cell:</label>
         <input type="number" id="replicationCount" min="1" max="50" value="2" onchange="updateTable()">
       </div>
     </div>
-
     <table id="dataTable">
       <thead></thead>
       <tbody></tbody>
     </table>
-
-    <button class="button" onclick="runAnova()">Run ANOVA</button>
-
+    <!-- Button Group -->
+    <div class="button-group">
+      <button class="button" onclick="runAnova()">Run ANOVA</button>
+      <button class="button reset" onclick="resetAll()">Reset</button>
+    </div>
+    <button class="button" id="excelButton" onclick="extractResultsExcel()">Extract Results in Excel</button>
+    <!-- Results Section -->
     <div id="results" class="results" style="display: none;">
       <h3>Results</h3>
       <table>
@@ -173,35 +220,32 @@
             <th>Decision</th>
           </tr>
         </thead>
-        <tbody id="resultTableBody">
-          <!-- Results will populate here -->
-        </tbody>
+        <tbody id="resultTableBody"></tbody>
       </table>
     </div>
   </div>
-
+  
   <script>
+    function toggleMenu() {
+      const menu = document.getElementById('menu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+    
     function handleAnovaTypeChange() {
       const anovaType = document.getElementById('anovaType').value;
       const replicationInput = document.getElementById('replicationInput');
-      // For one-way, update labels to reflect that groups are columns and observations are rows.
       if (anovaType === 'oneway') {
         replicationInput.style.display = 'none';
         document.getElementById('rowLabel').textContent = 'Number of Observations:';
         document.getElementById('colLabel').textContent = 'Number of Groups:';
       } else {
-        // For two-way ANOVA, we interpret rowCount as groups and colCount as levels.
         document.getElementById('rowLabel').textContent = 'Number of Rows (Groups or Factors):';
         document.getElementById('colLabel').textContent = 'Number of Columns (Observations or Levels):';
-        if (anovaType === 'twoway_with_rep') {
-          replicationInput.style.display = 'block';
-        } else {
-          replicationInput.style.display = 'none';
-        }
+        replicationInput.style.display = (anovaType === 'twoway_with_rep') ? 'block' : 'none';
       }
       updateTable();
     }
-
+    
     function updateTable() {
       const anovaType = document.getElementById('anovaType').value;
       const rowCount = parseInt(document.getElementById('rowCount').value);
@@ -212,10 +256,8 @@
       const tableBody = document.getElementById('dataTable').querySelector('tbody');
       tableHead.innerHTML = '';
       tableBody.innerHTML = '';
-
+      
       if (anovaType === 'oneway') {
-        // For one-way, groups are columns and observations are rows.
-        // Build header row: first cell "Observation", then one header per group.
         const tr = document.createElement('tr');
         const obsHeader = document.createElement('th');
         obsHeader.textContent = 'Observation';
@@ -230,8 +272,6 @@
           tr.appendChild(th);
         }
         tableHead.appendChild(tr);
-
-        // Build body: each row is one observation.
         for (let i = 0; i < rowCount; i++) {
           const tr = document.createElement('tr');
           const obsCell = document.createElement('td');
@@ -252,95 +292,85 @@
           tableBody.appendChild(tr);
         }
       } else {
-        // For two-way ANOVA, keep previous layout.
-        if (anovaType === 'twoway_no_rep' || anovaType === 'twoway_with_rep') {
-          // Build two-row header.
-          const tr1 = document.createElement('tr');
-          const th1 = document.createElement('th');
-          th1.rowSpan = 2;
-          const input1 = document.createElement('input');
-          input1.type = 'text';
-          input1.value = "Row Header";
-          input1.classList.add('editable-header');
-          th1.appendChild(input1);
-          tr1.appendChild(th1);
-          const th2 = document.createElement('th');
-          th2.colSpan = colCount;
-          th2.classList.add('editable-header');
-          const input2 = document.createElement('input');
-          input2.type = 'text';
-          input2.value = "Column Header";
-          input2.classList.add('editable-header');
-          th2.appendChild(input2);
-          tr1.appendChild(th2);
-          tableHead.appendChild(tr1);
-          const tr2 = document.createElement('tr');
-          for (let c = 0; c < colCount; c++) {
-            const th = document.createElement('th');
+        const tr1 = document.createElement('tr');
+        const th1 = document.createElement('th');
+        th1.rowSpan = 2;
+        const input1 = document.createElement('input');
+        input1.type = 'text';
+        input1.value = "Row Header";
+        input1.classList.add('editable-header');
+        th1.appendChild(input1);
+        tr1.appendChild(th1);
+        const th2 = document.createElement('th');
+        th2.colSpan = colCount;
+        th2.classList.add('editable-header');
+        const input2 = document.createElement('input');
+        input2.type = 'text';
+        input2.value = "Column Header";
+        input2.classList.add('editable-header');
+        th2.appendChild(input2);
+        tr1.appendChild(th2);
+        tableHead.appendChild(tr1);
+        const tr2 = document.createElement('tr');
+        for (let c = 0; c < colCount; c++) {
+          const th = document.createElement('th');
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = `x${c + 1}`;
+          input.classList.add('editable-header');
+          th.appendChild(input);
+          tr2.appendChild(th);
+        }
+        tableHead.appendChild(tr2);
+        for (let i = 0; i < parseInt(document.getElementById('rowCount').value); i++) {
+          const replications = isWithReplication ? replicationCount : 1;
+          for (let r = 0; r < replications; r++) {
+            const tr = document.createElement('tr');
+            const tdHeader = document.createElement('td');
             const input = document.createElement('input');
             input.type = 'text';
-            input.value = `x${c + 1}`;
+            input.value = isWithReplication ? `y${i + 1} (Sample ${r + 1})` : `y${i + 1}`;
             input.classList.add('editable-header');
-            th.appendChild(input);
-            tr2.appendChild(th);
-          }
-          tableHead.appendChild(tr2);
-
-          // Build table body.
-          for (let i = 0; i < parseInt(document.getElementById('rowCount').value); i++) {
-            const replications = isWithReplication ? replicationCount : 1;
-            for (let r = 0; r < replications; r++) {
-              const tr = document.createElement('tr');
-              const tdHeader = document.createElement('td');
-              const input = document.createElement('input');
-              input.type = 'text';
-              input.value = isWithReplication ? `y${i + 1} (Sample ${r + 1})` : `y${i + 1}`;
-              input.classList.add('editable-header');
-              tdHeader.appendChild(input);
-              tr.appendChild(tdHeader);
-              for (let j = 0; j < colCount; j++) {
-                const td = document.createElement('td');
-                const dataInput = document.createElement('input');
-                dataInput.type = 'number';
-                dataInput.placeholder = isWithReplication ? `R${i + 1}S${r + 1}C${j + 1}` : `R${i + 1}C${j + 1}`;
-                td.appendChild(dataInput);
-                tr.appendChild(td);
-              }
-              tableBody.appendChild(tr);
+            tdHeader.appendChild(input);
+            tr.appendChild(tdHeader);
+            for (let j = 0; j < colCount; j++) {
+              const td = document.createElement('td');
+              const dataInput = document.createElement('input');
+              dataInput.type = 'number';
+              dataInput.placeholder = isWithReplication ? `R${i + 1}S${r + 1}C${j + 1}` : `R${i + 1}C${j + 1}`;
+              td.appendChild(dataInput);
+              tr.appendChild(td);
             }
+            tableBody.appendChild(tr);
           }
         }
       }
     }
-
+    
     function calculateFCrit(df1, df2, alpha = 0.05) {
       if (df1 > 0 && df2 > 0) {
         if (typeof jStat === "undefined") {
-          alert("jStat library is not loaded. Please include it for F-critical value calculation.");
+          alert("jStat library is not loaded.");
           return "Unavailable";
         }
         return jStat.centralF.inv(1 - alpha, df1, df2).toFixed(3);
       }
       return "Unavailable";
     }
-
+    
     function runAnova() {
       const anovaType = document.getElementById('anovaType').value;
       if (anovaType === 'oneway') {
-        // For one-way ANOVA, the table is organized with observations as rows and groups as columns.
-        // Read each row (skip the first cell which is the observation label).
         const tableRows = document.getElementById('dataTable').querySelectorAll('tbody tr');
         let dataByRow = [];
         tableRows.forEach((row) => {
-          // Get cells after the first one.
           const cells = Array.from(row.querySelectorAll('td')).slice(1);
-          const rowData = cells.map(inputCell => {
-            const input = inputCell.querySelector('input');
+          const rowData = cells.map(cell => {
+            const input = cell.querySelector('input');
             return parseFloat(input.value) || 0;
           });
           dataByRow.push(rowData);
         });
-        // Transpose the data so that each group (column) becomes an array.
         const nRows = dataByRow.length;
         const nGroups = (nRows > 0) ? dataByRow[0].length : 0;
         let groups = [];
@@ -352,12 +382,9 @@
           groups.push(groupData);
         }
         const nTotal = nRows * nGroups;
-        // Compute grand mean.
         const allValues = groups.flat();
         const grandMean = allValues.reduce((sum, val) => sum + val, 0) / nTotal;
-        // Compute SS total.
         const ssTotal = allValues.reduce((sum, val) => sum + Math.pow(val - grandMean, 2), 0);
-        // Compute SS between groups.
         const ssBetween = groups.reduce((sum, group) => {
           const groupMean = group.reduce((s, val) => s + val, 0) / group.length;
           return sum + group.length * Math.pow(groupMean - grandMean, 2);
@@ -369,7 +396,6 @@
         const msWithin = (dfWithin > 0) ? ssWithin / dfWithin : 0;
         const fValue = (msWithin !== 0) ? msBetween / msWithin : 0;
         const fCrit = calculateFCrit(dfBetween, dfWithin);
-
         const results = [
           { source: 'Between Groups', ss: ssBetween.toFixed(2), df: dfBetween, ms: msBetween.toFixed(2), f: fValue.toFixed(2), fCrit: fCrit, decision: fValue > fCrit ? 'Significant' : 'Not Significant' },
           { source: 'Within Groups', ss: ssWithin.toFixed(2), df: dfWithin, ms: msWithin.toFixed(2), f: '-', fCrit: '-', decision: '-' },
@@ -377,7 +403,6 @@
         ];
         populateResults(results);
       } else if (anovaType === 'twoway_no_rep') {
-        // Two-way ANOVA without replication.
         const tableRows = document.getElementById('dataTable').querySelectorAll('tbody tr');
         let data = [];
         tableRows.forEach((row) => {
@@ -424,7 +449,6 @@
         ];
         populateResults(results);
       } else if (anovaType === 'twoway_with_rep') {
-        // Two-way ANOVA with replication.
         const effectiveReplication = parseInt(document.getElementById('replicationCount').value);
         const tableRows = document.getElementById('dataTable').querySelectorAll('tbody tr');
         let data = [];
@@ -441,16 +465,12 @@
         const nTotal = data.length * data[0].length * effectiveReplication;
         const grandMean = data.flat(2).reduce((sum, val) => sum + val, 0) / nTotal;
         let ssRows = 0, ssCols = 0, ssInteraction = 0;
-        // Compute row means for each group.
         const rowMeans = data.map(group =>
-          group.flat().reduce((sum, val) => sum + val, 0) / (data[0][0] ? group.flat().length : effectiveReplication)
+          group.flat().reduce((sum, val) => sum + val, 0) / group.flat().length
         );
-        // Compute column means across all groups.
         const colMeans = Array(data[0].length).fill(0).map((_, j) =>
-          data.reduce((sum, group) => sum + group.reduce((groupSum, row) => groupSum + row[j], 0), 0) /
-          (data.length * effectiveReplication)
+          data.reduce((sum, group) => sum + group.reduce((groupSum, row) => groupSum + row[j], 0), 0) / (data.length * effectiveReplication)
         );
-        // Compute cell means (averaging over replications).
         const cellMeans = data.map(group => {
           let means = [];
           for (let j = 0; j < group[0].length; j++) {
@@ -497,7 +517,7 @@
         populateResults(results);
       }
     }
-
+    
     function populateResults(results) {
       const resultTableBody = document.getElementById('resultTableBody');
       resultTableBody.innerHTML = '';
@@ -512,9 +532,44 @@
       });
       document.getElementById('results').style.display = 'block';
     }
-
-    // Initialize table on page load.
-    updateTable();
+    
+    function resetAll() {
+      document.getElementById('anovaType').selectedIndex = 0;
+      document.getElementById('rowCount').value = "3";
+      document.getElementById('colCount').value = "3";
+      if(document.getElementById('replicationCount')) {
+        document.getElementById('replicationCount').value = "2";
+      }
+      updateTable();
+      document.getElementById('results').style.display = 'none';
+    }
+    
+    function extractResultsExcel() {
+      // Gather basic input parameters
+      const inputs = [
+        ["Parameter", "Value"],
+        ["ANOVA Type", document.getElementById('anovaType').value],
+        ["Row Count", document.getElementById('rowCount').value],
+        ["Column Count", document.getElementById('colCount').value],
+        ["Replication Count", document.getElementById('replicationCount') ? document.getElementById('replicationCount').value : ""]
+      ];
+      // Gather results from the results table
+      const resultTable = document.getElementById('resultTableBody');
+      let resultsData = [["Source", "SS", "DF", "MS", "F", "F-Crit", "Decision"]];
+      for (let row of resultTable.rows) {
+        let rowData = [];
+        for (let cell of row.cells) {
+          rowData.push(cell.textContent);
+        }
+        resultsData.push(rowData);
+      }
+      const wb = XLSX.utils.book_new();
+      const wsInputs = XLSX.utils.aoa_to_sheet(inputs);
+      const wsResults = XLSX.utils.aoa_to_sheet(resultsData);
+      XLSX.utils.book_append_sheet(wb, wsInputs, "Inputs");
+      XLSX.utils.book_append_sheet(wb, wsResults, "Results");
+      XLSX.writeFile(wb, "Anova2Results.xlsx");
+    }
   </script>
 </body>
 </html>
